@@ -113,6 +113,11 @@ class AShooterCharacter : public ACharacter
 	/** [server + local] change running state */
 	void SetRunning(bool bNewRunning, bool bToggle);
 
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	/** [server + local] teleport */
+	void DoTeleport();
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
+
 	//////////////////////////////////////////////////////////////////////////
 	// Animations
 

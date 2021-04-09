@@ -277,8 +277,6 @@ public:
 	/** sets up input */
 	virtual void SetupInputComponent() override;
 
-	void Teleport();
-
 	/**
 	 * Called from game info upon end of the game, used to transition to proper state. 
 	 *

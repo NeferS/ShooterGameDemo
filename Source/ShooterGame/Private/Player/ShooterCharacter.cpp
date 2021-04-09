@@ -253,7 +253,6 @@ void AShooterCharacter::KilledBy(APawn* EventInstigator)
 	}
 }
 
-
 float AShooterCharacter::TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, class AActor* DamageCauser)
 {
 	AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
@@ -290,7 +289,6 @@ float AShooterCharacter::TakeDamage(float Damage, struct FDamageEvent const& Dam
 	return ActualDamage;
 }
 
-
 bool AShooterCharacter::CanDie(float KillingDamage, FDamageEvent const& DamageEvent, AController* Killer, AActor* DamageCauser) const
 {
 	if (bIsDying										// already dying
@@ -304,7 +302,6 @@ bool AShooterCharacter::CanDie(float KillingDamage, FDamageEvent const& DamageEv
 
 	return true;
 }
-
 
 bool AShooterCharacter::Die(float KillingDamage, FDamageEvent const& DamageEvent, AController* Killer, AActor* DamageCauser)
 {
@@ -328,7 +325,6 @@ bool AShooterCharacter::Die(float KillingDamage, FDamageEvent const& DamageEvent
 	OnDeath(KillingDamage, DamageEvent, Killer ? Killer->GetPawn() : NULL, DamageCauser);
 	return true;
 }
-
 
 void AShooterCharacter::OnDeath(float KillingDamage, struct FDamageEvent const& DamageEvent, class APawn* PawnInstigator, class AActor* DamageCauser)
 {
@@ -461,7 +457,6 @@ void AShooterCharacter::PlayHit(float DamageTaken, struct FDamageEvent const& Da
 	}
 }
 
-
 void AShooterCharacter::SetRagdollPhysics()
 {
 	bool bInRagdoll = false;
@@ -500,8 +495,6 @@ void AShooterCharacter::SetRagdollPhysics()
 		SetLifeSpan(10.0f);
 	}
 }
-
-
 
 void AShooterCharacter::ReplicateHit(float Damage, struct FDamageEvent const& DamageEvent, class APawn* PawnInstigator, class AActor* DamageCauser, bool bKilled)
 {
@@ -844,7 +837,6 @@ void AShooterCharacter::StopAllAnimMontages()
 	}
 }
 
-
 //////////////////////////////////////////////////////////////////////////
 // Input
 
@@ -884,8 +876,11 @@ void AShooterCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerI
 	PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AShooterCharacter::OnStartRunning);
 	PlayerInputComponent->BindAction("RunToggle", IE_Pressed, this, &AShooterCharacter::OnStartRunningToggle);
 	PlayerInputComponent->BindAction("Run", IE_Released, this, &AShooterCharacter::OnStopRunning);
-}
 
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	PlayerInputComponent->BindAction("Teleport", IE_Pressed, this, &AShooterCharacter::DoTeleport);
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
+}
 
 void AShooterCharacter::FireTrigger(float Val)
 {
@@ -1164,6 +1159,15 @@ void AShooterCharacter::OnStopJump()
 	bPressedJump = false;
 	StopJumping();
 }
+
+/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+void AShooterCharacter::DoTeleport()
+{
+	UShooterCharacterMovement* MoveComponent = Cast<UShooterCharacterMovement>(GetCharacterMovement());
+	if (MoveComponent) 
+		MoveComponent->DoTeleport();
+}
+/**END: CODE ADDED BY VINCENZO PARRILLA*/
 
 //////////////////////////////////////////////////////////////////////////
 // Replication

@@ -90,15 +90,8 @@ void AShooterPlayerController::SetupInputComponent()
 
 		InputComponent->BindAction("ToggleChat", IE_Pressed, this, &AShooterPlayerController::ToggleChatWindow);
 
-		InputComponent->BindAction("Teleport", IE_Pressed, this, &AShooterPlayerController::ToggleChatWindow);
-
 		bHasInitializedInputComponent = true;
 	}
-}
-
-void AShooterPlayerController::Teleport() 
-{
-	
 }
 
 void AShooterPlayerController::PostInitializeComponents()
