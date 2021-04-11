@@ -216,6 +216,14 @@ protected:
 	UPROPERTY()
 	FCanvasIcon HealthIcon;
 
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	UPROPERTY()
+	FCanvasIcon JetpackFuelBarBg;
+
+	UPROPERTY()
+	FCanvasIcon JetpackFuelBar;
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
+
 	/** Kills icon. */
 	UPROPERTY()
 	FCanvasIcon KillsIcon;
@@ -264,6 +272,12 @@ protected:
 	/** Texture for HUD elements. */
 	UPROPERTY()
 	UTexture2D* HUDAssets02Texture;
+
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	/** Texture for HUD elements. */
+	UPROPERTY()
+	UTexture2D* HUDAssets03Texture;
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
 
 	/** Overlay shown when health is low. */
 	UPROPERTY()
@@ -325,6 +339,11 @@ protected:
 
 	/** Draw player's health bar. */
 	void DrawHealth();
+
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	/** Draws jetpack fuel bar. */
+	void DrawJetpackFuel();
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
 
 	/** Draws match timer and player position. */
 	void DrawMatchTimerAndPosition();

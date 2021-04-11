@@ -804,6 +804,31 @@ void AShooterCharacter::UpdateRunSounds()
 	}
 }
 
+/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+void AShooterCharacter::DoTeleport()
+{
+	AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
+	UShooterCharacterMovement* MoveComponent = Cast<UShooterCharacterMovement>(GetCharacterMovement());
+	if (MoveComponent && MyPC && MyPC->IsGameInputAllowed())
+		MoveComponent->bWantsToTeleport = true;
+}
+
+void AShooterCharacter::Jetpack()
+{
+	AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
+	UShooterCharacterMovement* MoveComponent = Cast<UShooterCharacterMovement>(GetCharacterMovement());
+	if (MoveComponent && MyPC && MyPC->IsGameInputAllowed()) 
+		MoveComponent->bWantsToJetpack = true;
+}
+
+void AShooterCharacter::StopJetpack()
+{
+	UShooterCharacterMovement* MoveComponent = Cast<UShooterCharacterMovement>(GetCharacterMovement());
+	if (MoveComponent)
+		MoveComponent->bWantsToJetpack = false;
+}
+/**END: CODE ADDED BY VINCENZO PARRILLA*/
+
 //////////////////////////////////////////////////////////////////////////
 // Animations
 
@@ -879,6 +904,9 @@ void AShooterCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerI
 
 	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
 	PlayerInputComponent->BindAction("Teleport", IE_Pressed, this, &AShooterCharacter::DoTeleport);
+
+	PlayerInputComponent->BindAction("Jetpack", IE_Pressed, this, &AShooterCharacter::OnStartJetpack);
+	PlayerInputComponent->BindAction("Jetpack", IE_Released, this, &AShooterCharacter::OnStopJetpack);
 	/**END: CODE ADDED BY VINCENZO PARRILLA*/
 }
 
@@ -1161,11 +1189,18 @@ void AShooterCharacter::OnStopJump()
 }
 
 /**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
-void AShooterCharacter::DoTeleport()
+void AShooterCharacter::OnStartJetpack()
 {
-	UShooterCharacterMovement* MoveComponent = Cast<UShooterCharacterMovement>(GetCharacterMovement());
-	if (MoveComponent) 
-		MoveComponent->DoTeleport();
+	AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
+	if (MyPC && MyPC->IsGameInputAllowed())
+	{
+		Jetpack();
+	}
+}
+
+void AShooterCharacter::OnStopJetpack()
+{
+	StopJetpack();
 }
 /**END: CODE ADDED BY VINCENZO PARRILLA*/
 

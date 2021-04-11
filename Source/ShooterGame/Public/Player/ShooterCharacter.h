@@ -114,8 +114,14 @@ class AShooterCharacter : public ACharacter
 	void SetRunning(bool bNewRunning, bool bToggle);
 
 	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
-	/** [server + local] teleport */
+	/** [server + local] teleport the character forward */
 	void DoTeleport();
+
+	/** [server + local] use jetpack */
+	void Jetpack();
+
+	/** [server + local] stop using jetpack */
+	void StopJetpack();
 	/**END: CODE ADDED BY VINCENZO PARRILLA*/
 
 	//////////////////////////////////////////////////////////////////////////
@@ -205,6 +211,14 @@ class AShooterCharacter : public ACharacter
 
 	/** player released run action */
 	void OnStopRunning();
+
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	/** player pressed jetpack action */
+	void OnStartJetpack();
+
+	/** player released jetpack action */
+	void OnStopJetpack();
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
 
 	//////////////////////////////////////////////////////////////////////////
 	// Reading data

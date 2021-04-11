@@ -31,6 +31,7 @@ AShooterHUD::AShooterHUD(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	static ConstructorHelpers::FObjectFinder<UTexture2D> HitTextureOb(TEXT("/Game/UI/HUD/HitIndicator"));
 	static ConstructorHelpers::FObjectFinder<UTexture2D> HUDMainTextureOb(TEXT("/Game/UI/HUD/HUDMain"));
 	static ConstructorHelpers::FObjectFinder<UTexture2D> HUDAssets02TextureOb(TEXT("/Game/UI/HUD/HUDAssets02"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> HUDAssets03TextureOb(TEXT("/Game/UI/HUD/HUDAssets03"));
 	static ConstructorHelpers::FObjectFinder<UTexture2D> LowHealthOverlayTextureOb(TEXT("/Game/UI/HUD/LowHealthOverlay"));
 
 	// Fonts are not included in dedicated server builds.
@@ -46,6 +47,7 @@ AShooterHUD::AShooterHUD(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	HitNotifyTexture = HitTextureOb.Object;
 	HUDMainTexture = HUDMainTextureOb.Object;
 	HUDAssets02Texture = HUDAssets02TextureOb.Object;
+	HUDAssets03Texture = HUDAssets03TextureOb.Object;
 	LowHealthOverlayTexture = LowHealthOverlayTextureOb.Object;
 
 	HitNotifyIcon[EShooterHudPosition::Left] = UCanvas::MakeIcon(HitNotifyTexture,  158, 831, 585, 392);	
@@ -65,6 +67,11 @@ AShooterHUD::AShooterHUD(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	DeathMessagesBg = UCanvas::MakeIcon(HUDMainTexture, 502, 177, 342, 187);
 	HealthBar = UCanvas::MakeIcon(HUDAssets02Texture, 67, 212, 372, 50);
 	HealthBarBg = UCanvas::MakeIcon(HUDAssets02Texture, 67, 162, 372, 50);
+
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	JetpackFuelBar = UCanvas::MakeIcon(HUDAssets03Texture, 67, 212, 372, 50);
+	JetpackFuelBarBg = UCanvas::MakeIcon(HUDAssets03Texture, 67, 162, 372, 50);
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
 
 	HealthIcon = UCanvas::MakeIcon(HUDAssets02Texture, 78, 262, 28, 28);
 	KillsIcon = UCanvas::MakeIcon(HUDMainTexture, 318, 93, 24, 24);
@@ -333,6 +340,30 @@ void AShooterHUD::DrawHealth()
 	Canvas->DrawIcon(HealthIcon,HealthPosX + Offset * ScaleUI, HealthPosY + (HealthBar.VL - HealthIcon.VL) / 2.0f * ScaleUI, ScaleUI);
 }
 
+/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+void AShooterHUD::DrawJetpackFuel() 
+{
+	AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(PlayerOwner);
+	UShooterCharacterMovement* CharMov = Cast<UShooterCharacterMovement>(MyPC->GetCharacter()->GetCharacterMovement());
+	if (!CharMov)
+		return;
+	
+	const float JetpackOffsetX = 20.0f;
+	const float JetpackOffsetY = 150.0f;
+	Canvas->SetDrawColor(FColor::White);
+	const float JetpackFuelPosX = Canvas->ClipX - (JetpackFuelBarBg.UL + JetpackOffsetX) * ScaleUI;
+	const float JetpackFuelPosY = Canvas->ClipY - (Offset + JetpackFuelBarBg.VL + JetpackOffsetY) * ScaleUI;
+	Canvas->DrawIcon(JetpackFuelBarBg, JetpackFuelPosX, JetpackFuelPosY, ScaleUI);
+	const float FuelAmount = FMath::Min(1.0f, CharMov->GetJetpackAvailableFuel()/CharMov->GetJetpackMaxFuel());
+
+	FCanvasTileItem TileItem(FVector2D(JetpackFuelPosX, JetpackFuelPosY), JetpackFuelBar.Texture->Resource,
+							 FVector2D(JetpackFuelBar.UL * FuelAmount  * ScaleUI, JetpackFuelBar.VL * ScaleUI), FLinearColor::White);
+	MakeUV(JetpackFuelBar, TileItem.UV0, TileItem.UV1, JetpackFuelBar.U, JetpackFuelBar.V, JetpackFuelBar.UL * FuelAmount, JetpackFuelBar.VL);
+	TileItem.BlendMode = SE_BLEND_Translucent;
+	Canvas->DrawItem(TileItem);
+}
+/**END: CODE ADDED BY VINCENZO PARRILLA*/
+
 void AShooterHUD::DrawMatchTimerAndPosition()
 {
 	AShooterGameState* const MyGameState = GetWorld()->GetGameState<AShooterGameState>();
@@ -577,6 +608,9 @@ void AShooterHUD::DrawHUD()
 		if (MyPawn && MyPawn->IsAlive())
 		{
 			DrawHealth();
+			/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+			DrawJetpackFuel();
+			/**END: CODE ADDED BY VINCENZO PARRILLA*/
 			DrawWeaponHUD();
 		}
 		else
