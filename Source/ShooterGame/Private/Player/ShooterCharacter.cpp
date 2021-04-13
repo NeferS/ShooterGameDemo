@@ -3,6 +3,7 @@
 #include "ShooterGame.h"
 #include "Weapons/ShooterWeapon.h"
 #include "Weapons/ShooterDamageType.h"
+#include "ShooterPickup_Gun.h"
 #include "UI/ShooterHUD.h"
 #include "Online/ShooterPlayerState.h"
 #include "Animation/AnimMontage.h"
@@ -57,6 +58,17 @@ AShooterCharacter::AShooterCharacter(const FObjectInitializer& ObjectInitializer
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(COLLISION_PROJECTILE, ECR_Block);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(COLLISION_WEAPON, ECR_Ignore);
+
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	// Find the class for the dropped ammo pickup on player death
+	static ConstructorHelpers::FClassFinder<AShooterPickup_Ammo> BPClassFinder(TEXT("/Game/Blueprints/Pickups/Pickup_DroppedGun"));
+	ShooterPickupDroppedGunClass = BPClassFinder.Class;
+	static ConstructorHelpers::FClassFinder<AShooterWeapon> BPClassFinder2(TEXT("/Game/Blueprints/Weapons/WeapGun"));
+	WeaponTypeRifle = BPClassFinder2.Class;
+	static ConstructorHelpers::FClassFinder<AShooterWeapon> BPClassFinder3(TEXT("/Game/Blueprints/Weapons/WeapLauncher"));
+	WeaponTypeLauncher = BPClassFinder3.Class;
+	// here new weapon types can be added; a reference in ShooterCharacter.h is needed
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
 
 	TargetingSpeedModifier = 0.5f;
 	bIsTargeting = false;
@@ -361,6 +373,14 @@ void AShooterCharacter::OnDeath(float KillingDamage, struct FDamageEvent const& 
 		UGameplayStatics::PlaySoundAtLocation(this, DeathSound, GetActorLocation());
 	}
 
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	// spawn the currently equipped gun with all its ammo
+	if (GetLocalRole() == ROLE_Authority)
+		SpawnGun();
+	else
+		ServerSpawnGun();
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
+
 	// remove all weapons
 	DestroyInventory();
 
@@ -594,6 +614,44 @@ void AShooterCharacter::DestroyInventory()
 		}
 	}
 }
+
+/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+void AShooterCharacter::SpawnGun()
+{
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	AShooterPickup_Gun* DroppedGun = Cast<AShooterPickup_Gun>(GetWorld()->SpawnActor<AActor>(ShooterPickupDroppedGunClass, GetActorLocation(), GetActorRotation(), SpawnParams));
+	AShooterWeapon* EquippedWeapon = GetWeapon();
+	const int32 CurrentAmmo = EquippedWeapon->GetCurrentAmmo();
+	DroppedGun->SetAmmoClips(CurrentAmmo / EquippedWeapon->GetAmmoPerClip());
+	DroppedGun->SetAmmoLoadedClip(CurrentAmmo % EquippedWeapon->GetAmmoPerClip());
+	DroppedGun->MaskMesh = EquippedWeapon->GetWeaponMesh()->SkeletalMesh; // mask variable to trigger OnRep call
+	DroppedGun->SetWeaponPickupMesh(DroppedGun->MaskMesh); // update mesh when called by the server
+	TSubclassOf<class AShooterWeapon> WeapType;
+	switch (EquippedWeapon->GetAmmoType())
+	{
+	case AShooterWeapon::EAmmoType::EBullet:
+		WeapType = WeaponTypeRifle;
+		break;
+	case AShooterWeapon::EAmmoType::ERocket:
+		WeapType = WeaponTypeLauncher;
+		break;
+		//add here any new case
+	}
+	DroppedGun->SetWeaponType(WeapType);
+}
+
+bool AShooterCharacter::ServerSpawnGun_Validate()
+{
+	return true;
+}
+
+void AShooterCharacter::ServerSpawnGun_Implementation()
+{
+	SpawnGun();
+}
+/**END: CODE ADDED BY VINCENZO PARRILLA*/
 
 void AShooterCharacter::AddWeapon(AShooterWeapon* Weapon)
 {

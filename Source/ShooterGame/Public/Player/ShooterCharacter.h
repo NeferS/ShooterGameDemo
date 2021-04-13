@@ -486,6 +486,26 @@ protected:
 	/** [server] remove all weapons from inventory and destroy them */
 	void DestroyInventory();
 
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	/** A dropped gun pickup when the player dies */
+	TSubclassOf<class AShooterPickup_Ammo> ShooterPickupDroppedGunClass;
+
+	/** Weapon type of the rifle */
+	TSubclassOf<class AShooterWeapon> WeaponTypeRifle;
+
+	/** Weapon type of the launcher */
+	TSubclassOf<class AShooterWeapon> WeaponTypeLauncher;
+
+	// new weapon types references can be added here
+
+	/** [local + server] spawns the currently equipped gun as pickup */
+	void SpawnGun();
+
+	/** [server RPC] spawns the currently equipped gun as pickup */
+	UFUNCTION(reliable, server, WithValidation)
+	void ServerSpawnGun();
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
+
 	/** equip weapon */
 	UFUNCTION(reliable, server, WithValidation)
 	void ServerEquipWeapon(class AShooterWeapon* NewWeapon);
