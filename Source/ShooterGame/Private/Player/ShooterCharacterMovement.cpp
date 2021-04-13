@@ -64,12 +64,16 @@ void UShooterCharacterMovement::OnMovementUpdated(float DeltaSeconds, const FVec
 	//TELEPORT
 	if (bWantsToTeleport && (CharacterOwner->GetLocalRole() == ROLE_Authority || CharacterOwner->GetLocalRole() == ROLE_AutonomousProxy))
 	{
-		const FVector NewLocation = PawnOwner->GetActorLocation() + PawnOwner->GetActorForwardVector() * TeleportDistance;
+		const FVector OldLocation = PawnOwner->GetActorLocation();
+		const FVector NewLocation = OldLocation + PawnOwner->GetActorForwardVector() * TeleportDistance;
 		PawnOwner->SetActorLocation(NewLocation, true);
-		if(GetPawnOwner()->IsLocallyControlled())
-			UGameplayStatics::SpawnSoundAtLocation(GetWorld(), TeleportSound, NewLocation);
-		if(GetOwner()->HasAuthority())
-			MulticastPlaySound(TeleportSound, PawnOwner->GetActorLocation());
+		if (FVector::Dist(OldLocation, PawnOwner->GetActorLocation()) > 10.0f)
+		{
+			if (GetPawnOwner()->IsLocallyControlled())
+				UGameplayStatics::SpawnSoundAtLocation(GetWorld(), TeleportSound, NewLocation);
+			if (GetOwner()->HasAuthority())
+				MulticastPlaySound(TeleportSound, PawnOwner->GetActorLocation());
+		}
 		bWantsToTeleport = false;
 	}
 
