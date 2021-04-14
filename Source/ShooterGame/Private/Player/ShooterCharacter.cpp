@@ -1097,7 +1097,7 @@ void AShooterCharacter::OnStopFire()
 void AShooterCharacter::OnStartTargeting()
 {
 	AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
-	if (MyPC && MyPC->IsGameInputAllowed())
+	if (MyPC && MyPC->IsGameInputAllowed() && !IsFrozen())
 	{
 		if (IsRunning())
 		{
