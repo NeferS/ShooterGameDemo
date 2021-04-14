@@ -69,6 +69,20 @@ class UShooterCharacterMovement : public UCharacterMovementComponent
 	/** fills the jetpack if some conditions are met */
 	void FillJetpack(const float DeltaSeconds);
 
+	//FREEZING GUN
+	/** [server RPC] sets the frozen state of the character */
+	UFUNCTION(reliable, server, WithValidation)
+	void ServerSetFrozenState(bool IsFrozen);
+	/** Character freeze time */
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement: Frozen State")
+	float FrozenTime;
+	/** Handles the freeze time */
+	FTimerHandle* FrozenTimer = new FTimerHandle();
+	/** [local + server] sets the frozen state of the character */
+	void SetFrozenState(bool IsFrozen);
+	/** Callback function called when the frozen time elapses */
+	void TimeElapsedCallback();
+
 	// GENERAL 
 	UFUNCTION(reliable, NetMulticast)
 	void MulticastPlaySound(USoundBase* Sound, FVector Location);

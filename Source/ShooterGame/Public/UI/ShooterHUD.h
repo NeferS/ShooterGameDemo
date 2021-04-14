@@ -283,6 +283,10 @@ protected:
 	UPROPERTY()
 	UTexture2D* LowHealthOverlayTexture;
 
+	/** Overlay shown when character is frozen. */
+	UPROPERTY()
+	UTexture2D* FrozenOverlayTexture;
+
 	/** Large font - used for ammo display etc. */
 	UPROPERTY()
 	UFont* BigFont;

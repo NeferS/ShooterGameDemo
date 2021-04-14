@@ -3,6 +3,7 @@
 #pragma once
 
 #include "ShooterTypes.h"
+#include "Materials/Material.h"
 #include "ShooterCharacter.generated.h"
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnShooterCharacterEquipWeapon, AShooterCharacter*, AShooterWeapon* /* new */);
@@ -57,6 +58,15 @@ class AShooterCharacter : public ACharacter
 	* @param	TestPC	Controller to check against.
 	*/
 	bool IsEnemyFor(AController* TestPC) const;
+
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	/** character default material */
+	UPROPERTY(EditDefaultsOnly, Category = "Character: Frozen State")
+	UMaterial* DefaultMaterial;
+	/** character frozen material */
+	UPROPERTY(EditDefaultsOnly, Category = "Character: Frozen State")
+	UMaterial* FrozenMaterial;
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
 
 	//////////////////////////////////////////////////////////////////////////
 	// Inventory
@@ -122,6 +132,20 @@ class AShooterCharacter : public ACharacter
 
 	/** [server + local] stop using jetpack */
 	void StopJetpack();
+
+	/** Character current frozen state */
+	UPROPERTY(ReplicatedUsing = OnRep_IsFrozen)
+	bool bIsFrozen;
+
+	/** Replicates the action performed when the value of bIsFrozen changes */
+	UFUNCTION()
+	void OnRep_IsFrozen();
+
+	/** The character is currently frozen ? */
+	bool IsFrozen() const;
+
+	/** [server + local] Set frozen appearance */
+	void SetFrozenAppearance(bool IsFrozen);
 	/**END: CODE ADDED BY VINCENZO PARRILLA*/
 
 	//////////////////////////////////////////////////////////////////////////
@@ -495,6 +519,9 @@ protected:
 
 	/** Weapon type of the launcher */
 	TSubclassOf<class AShooterWeapon> WeaponTypeLauncher;
+
+	/** Weapon type of the freezing gun */
+	TSubclassOf<class AShooterWeapon> WeaponTypeFreezingGun;
 
 	// new weapon types references can be added here
 

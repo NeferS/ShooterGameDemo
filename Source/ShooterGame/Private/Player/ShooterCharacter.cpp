@@ -61,13 +61,17 @@ AShooterCharacter::AShooterCharacter(const FObjectInitializer& ObjectInitializer
 
 	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
 	// Find the class for the dropped ammo pickup on player death
-	static ConstructorHelpers::FClassFinder<AShooterPickup_Ammo> BPClassFinder(TEXT("/Game/Blueprints/Pickups/Pickup_DroppedGun"));
-	ShooterPickupDroppedGunClass = BPClassFinder.Class;
-	static ConstructorHelpers::FClassFinder<AShooterWeapon> BPClassFinder2(TEXT("/Game/Blueprints/Weapons/WeapGun"));
-	WeaponTypeRifle = BPClassFinder2.Class;
-	static ConstructorHelpers::FClassFinder<AShooterWeapon> BPClassFinder3(TEXT("/Game/Blueprints/Weapons/WeapLauncher"));
-	WeaponTypeLauncher = BPClassFinder3.Class;
+	static ConstructorHelpers::FClassFinder<AShooterPickup_Ammo> BPClassFinder0(TEXT("/Game/Blueprints/Pickups/Pickup_DroppedGun"));
+	ShooterPickupDroppedGunClass = BPClassFinder0.Class;
+	static ConstructorHelpers::FClassFinder<AShooterWeapon> BPClassFinder1(TEXT("/Game/Blueprints/Weapons/WeapGun"));
+	WeaponTypeRifle = BPClassFinder1.Class;
+	static ConstructorHelpers::FClassFinder<AShooterWeapon> BPClassFinder2(TEXT("/Game/Blueprints/Weapons/WeapLauncher"));
+	WeaponTypeLauncher = BPClassFinder2.Class;
+	static ConstructorHelpers::FClassFinder<AShooterWeapon> BPClassFinder3(TEXT("/Game/Blueprints/Weapons/WeapFreezingGun"));
+	WeaponTypeFreezingGun = BPClassFinder3.Class;
 	// here new weapon types can be added; a reference in ShooterCharacter.h is needed
+
+	bIsFrozen = false;
 	/**END: CODE ADDED BY VINCENZO PARRILLA*/
 
 	TargetingSpeedModifier = 0.5f;
@@ -277,6 +281,22 @@ float AShooterCharacter::TakeDamage(float Damage, struct FDamageEvent const& Dam
 	{
 		return 0.f;
 	}
+
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	// Handle freezing ammo
+	if ((DamageEvent.DamageTypeClass->GetName()).Equals("DmgType_Freeze_C"))
+	{
+		UShooterCharacterMovement* MoveComp = Cast<UShooterCharacterMovement>(GetCharacterMovement());
+		if (MoveComp)
+		{
+			if (GetLocalRole() == ROLE_Authority)
+				MoveComp->SetFrozenState(true);
+			else
+				MoveComp->ServerSetFrozenState(true);
+		}
+		return 0.0f;	// No damage from the freezing gun (1.0f in the blueprint is set to trigger the call of this function by Explode())
+	}
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
 
 	// Modify based on game rules.
 	AShooterGameMode* const Game = GetWorld()->GetAuthGameMode<AShooterGameMode>();
@@ -618,12 +638,16 @@ void AShooterCharacter::DestroyInventory()
 /**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
 void AShooterCharacter::SpawnGun()
 {
+	AShooterWeapon* EquippedWeapon = GetWeapon();
+	const int32 CurrentAmmo = EquippedWeapon->GetCurrentAmmo();
+	if (CurrentAmmo == 0)
+		return;
+
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	AShooterPickup_Gun* DroppedGun = Cast<AShooterPickup_Gun>(GetWorld()->SpawnActor<AActor>(ShooterPickupDroppedGunClass, GetActorLocation(), GetActorRotation(), SpawnParams));
-	AShooterWeapon* EquippedWeapon = GetWeapon();
-	const int32 CurrentAmmo = EquippedWeapon->GetCurrentAmmo();
+	
 	DroppedGun->SetAmmoClips(CurrentAmmo / EquippedWeapon->GetAmmoPerClip());
 	DroppedGun->SetAmmoLoadedClip(CurrentAmmo % EquippedWeapon->GetAmmoPerClip());
 	DroppedGun->MaskMesh = EquippedWeapon->GetWeaponMesh()->SkeletalMesh; // mask variable to trigger OnRep call
@@ -636,6 +660,9 @@ void AShooterCharacter::SpawnGun()
 		break;
 	case AShooterWeapon::EAmmoType::ERocket:
 		WeapType = WeaponTypeLauncher;
+		break;
+	case AShooterWeapon::EAmmoType::EFreezeRocket:
+		WeapType = WeaponTypeFreezingGun;
 		break;
 		//add here any new case
 	}
@@ -774,12 +801,12 @@ void AShooterCharacter::StopWeaponFire()
 
 bool AShooterCharacter::CanFire() const
 {
-	return IsAlive();
+	return IsAlive() && !IsFrozen(); // modified condition
 }
 
 bool AShooterCharacter::CanReload() const
 {
-	return true;
+	return !IsFrozen(); // modified condition
 }
 
 void AShooterCharacter::SetTargeting(bool bNewTargeting)
@@ -867,7 +894,7 @@ void AShooterCharacter::DoTeleport()
 {
 	AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
 	UShooterCharacterMovement* MoveComponent = Cast<UShooterCharacterMovement>(GetCharacterMovement());
-	if (MoveComponent && MyPC && MyPC->IsGameInputAllowed())
+	if (MoveComponent && MyPC && MyPC->IsGameInputAllowed() && !IsFrozen())
 		MoveComponent->bWantsToTeleport = true;
 }
 
@@ -875,7 +902,7 @@ void AShooterCharacter::Jetpack()
 {
 	AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
 	UShooterCharacterMovement* MoveComponent = Cast<UShooterCharacterMovement>(GetCharacterMovement());
-	if (MoveComponent && MyPC && MyPC->IsGameInputAllowed()) 
+	if (MoveComponent && MyPC && MyPC->IsGameInputAllowed() && !IsFrozen()) 
 		MoveComponent->bWantsToJetpack = true;
 }
 
@@ -884,6 +911,26 @@ void AShooterCharacter::StopJetpack()
 	UShooterCharacterMovement* MoveComponent = Cast<UShooterCharacterMovement>(GetCharacterMovement());
 	if (MoveComponent)
 		MoveComponent->bWantsToJetpack = false;
+}
+
+bool AShooterCharacter::IsFrozen() const
+{
+	return bIsFrozen;
+}
+
+void AShooterCharacter::SetFrozenAppearance(bool bIsFrozen)
+{
+	if (IsAlive())
+	{
+		GetMesh()->SetMaterial(0, bIsFrozen ? FrozenMaterial : DefaultMaterial);
+	}
+}
+
+void AShooterCharacter::OnRep_IsFrozen()
+{
+	UShooterCharacterMovement* MoveComp = Cast<UShooterCharacterMovement>(GetCharacterMovement());
+	if (MoveComp)
+		MoveComp->SetFrozenState(bIsFrozen);
 }
 /**END: CODE ADDED BY VINCENZO PARRILLA*/
 
@@ -1067,6 +1114,11 @@ void AShooterCharacter::OnStopTargeting()
 
 void AShooterCharacter::OnNextWeapon()
 {
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	if (IsFrozen())
+		return;
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
+
 	AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
@@ -1081,6 +1133,11 @@ void AShooterCharacter::OnNextWeapon()
 
 void AShooterCharacter::OnPrevWeapon()
 {
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	if (IsFrozen())
+		return;
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
+
 	AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
@@ -1289,6 +1346,10 @@ void AShooterCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > &
 	// everyone
 	DOREPLIFETIME(AShooterCharacter, CurrentWeapon);
 	DOREPLIFETIME(AShooterCharacter, Health);
+
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	DOREPLIFETIME(AShooterCharacter, bIsFrozen);
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
 }
 
 bool AShooterCharacter::IsReplicationPausedForConnection(const FNetViewer& ConnectionOwnerNetViewer)

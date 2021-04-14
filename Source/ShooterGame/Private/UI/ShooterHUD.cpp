@@ -33,6 +33,7 @@ AShooterHUD::AShooterHUD(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	static ConstructorHelpers::FObjectFinder<UTexture2D> HUDAssets02TextureOb(TEXT("/Game/UI/HUD/HUDAssets02"));
 	static ConstructorHelpers::FObjectFinder<UTexture2D> HUDAssets03TextureOb(TEXT("/Game/UI/HUD/HUDAssets03"));
 	static ConstructorHelpers::FObjectFinder<UTexture2D> LowHealthOverlayTextureOb(TEXT("/Game/UI/HUD/LowHealthOverlay"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> FrozenOverlayTextureOb(TEXT("/Game/UI/HUD/FrozenOverlay"));
 
 	// Fonts are not included in dedicated server builds.
 	#if !UE_SERVER
@@ -49,6 +50,7 @@ AShooterHUD::AShooterHUD(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	HUDAssets02Texture = HUDAssets02TextureOb.Object;
 	HUDAssets03Texture = HUDAssets03TextureOb.Object;
 	LowHealthOverlayTexture = LowHealthOverlayTextureOb.Object;
+	FrozenOverlayTexture = FrozenOverlayTextureOb.Object;
 
 	HitNotifyIcon[EShooterHudPosition::Left] = UCanvas::MakeIcon(HitNotifyTexture,  158, 831, 585, 392);	
 	HitNotifyIcon[EShooterHudPosition::FrontLeft] = UCanvas::MakeIcon(HitNotifyTexture, 369, 434, 460, 378);	
@@ -149,7 +151,7 @@ void AShooterHUD::DrawWeaponHUD()
 
 		//PRIMARY WEAPON
 		{
-			const float PriWeapOffsetY = 65;
+			const float PriWeapOffsetY = 110;
 			const float PriWeaponBoxWidth = 150;
 		
 			Canvas->SetDrawColor(FColor::White);
@@ -247,12 +249,12 @@ void AShooterHUD::DrawWeaponHUD()
 		{
 			Canvas->SetDrawColor(FColor::White);
 			//offsets
-			const float SecWeapOffsetY = 0;
+			const float SecWeapOffsetY = 55;
 			const float SecWeaponBoxWidth = 120;
 
 			//background positioning
 			const float SecWeapBgPosX = Canvas->ClipX - Canvas->OrgX - (SecondaryWeapBg.UL + Offset) * ScaleUI;
-			const float SecWeapBgPosY =  Canvas->ClipY - Canvas->OrgY - (SecondaryWeapBg.VL + Offset) * ScaleUI;
+			const float SecWeapBgPosY =  Canvas->ClipY - Canvas->OrgY - (SecWeapOffsetY + SecondaryWeapBg.VL + Offset) * ScaleUI;
 
 			//weapon draw position
 			const float SecWeapPosX = Canvas->ClipX - Canvas->OrgX - ((SecWeaponBoxWidth + SecondaryWeapon->SecondaryIcon.UL) / 2.0f + 2 * Offset) * ScaleUI;
@@ -319,6 +321,95 @@ void AShooterHUD::DrawWeaponHUD()
 			Canvas->DrawItem( TextItem, TopTextPosX, TopTextPosY );
 		}
 		// END OF SECONDARY WEAPON
+
+		/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+		//BONUS WEAPON
+		AShooterWeapon* BonusWeapon = NULL;
+		for (int32 i = 0; i < MyPawn->GetInventoryCount(); i++)
+		{
+			if (MyPawn->GetInventoryWeapon(i) != MyWeapon && MyPawn->GetInventoryWeapon(i) != SecondaryWeapon)
+			{
+				BonusWeapon = MyPawn->GetInventoryWeapon(i);
+				break;
+			}
+		}
+		if (BonusWeapon)
+		{
+			Canvas->SetDrawColor(FColor::White);
+			//offsets
+			const float BonWeapOffsetY = 0;
+			const float BonWeaponBoxWidth = 120;
+
+			//background positioning
+			const float BonWeapBgPosX = Canvas->ClipX - Canvas->OrgX - (SecondaryWeapBg.UL + Offset) * ScaleUI;
+			const float BonWeapBgPosY = Canvas->ClipY - Canvas->OrgY - (SecondaryWeapBg.VL + Offset) * ScaleUI;
+
+			//weapon draw position
+			const float BonWeapPosX = Canvas->ClipX - Canvas->OrgX - ((BonWeaponBoxWidth + BonusWeapon->SecondaryIcon.UL) / 2.0f + 2 * Offset) * ScaleUI;
+			const float BonWeapPosY = Canvas->ClipY - Canvas->OrgY - (BonWeapOffsetY + (SecondaryWeapBg.VL + BonusWeapon->SecondaryIcon.VL) / 2.0f + Offset) * ScaleUI;
+
+			//secondary clip draw position
+			const float BonClipWidth = BonusWeapon->SecondaryClipIcon.UL + BonusWeapon->SecondaryClipIconOffset * (BonusWeapon->AmmoIconsCount - 1);
+			const float BonClipBoxWidth = 45.0f;
+			const float BonClipPosX = Canvas->ClipX - Canvas->OrgX - (BonWeaponBoxWidth + BonClipBoxWidth + BonClipWidth + 2 * Offset) * ScaleUI;
+			const float BonClipPosY = Canvas->ClipY - Canvas->OrgY - (BonWeapOffsetY + (SecondaryWeapBg.VL + BonusWeapon->SecondaryClipIcon.VL) / 2.0f + Offset) * ScaleUI;
+
+			//draw background in two parts to match number of clip icons
+			const float LeftCornerWidth = 38;
+			FCanvasTileItem TileItem(FVector2D(BonClipPosX - Offset * ScaleUI, BonWeapBgPosY), SecondaryWeapBg.Texture->Resource,
+				FVector2D(LeftCornerWidth * ScaleUI, SecondaryWeapBg.VL * ScaleUI), FLinearColor::White);
+			MakeUV(SecondaryWeapBg, TileItem.UV0, TileItem.UV1, SecondaryWeapBg.U, SecondaryWeapBg.V, LeftCornerWidth, SecondaryWeapBg.VL);
+			TileItem.BlendMode = SE_BLEND_Translucent;
+			Canvas->DrawItem(TileItem);
+
+			const float RestWidth = Canvas->ClipX - BonClipPosX - LeftCornerWidth * ScaleUI;
+			TileItem.Position = FVector2D(BonClipPosX - (Offset - LeftCornerWidth) * ScaleUI, BonWeapBgPosY);
+			TileItem.Size = FVector2D(RestWidth, SecondaryWeapBg.VL * ScaleUI);
+			MakeUV(SecondaryWeapBg, TileItem.UV0, TileItem.UV1, SecondaryWeapBg.U + SecondaryWeapBg.UL - RestWidth / ScaleUI, SecondaryWeapBg.V, RestWidth / ScaleUI, SecondaryWeapBg.VL);
+			Canvas->DrawItem(TileItem);
+
+			/** Drawing secondary clip **/
+			const float AmmoPerIcon = BonusWeapon->GetAmmoPerClip() / BonusWeapon->AmmoIconsCount;
+			for (int32 i = 0; i < BonusWeapon->AmmoIconsCount; i++)
+			{
+				if ((i + 1) * AmmoPerIcon > BonusWeapon->GetCurrentAmmoInClip())
+				{
+					const float UsedPerIcon = (i + 1) * AmmoPerIcon - BonusWeapon->GetCurrentAmmoInClip();
+					float PercentLeftInIcon = 0;
+					if (UsedPerIcon < AmmoPerIcon)
+					{
+						PercentLeftInIcon = (AmmoPerIcon - UsedPerIcon) / AmmoPerIcon;
+					}
+					const int32 Color = 128 + 128 * PercentLeftInIcon;
+					Canvas->SetDrawColor(Color, Color, Color, Color);
+				}
+
+				const float ClipOffset = BonusWeapon->SecondaryClipIconOffset * ScaleUI * i;
+				Canvas->DrawIcon(BonusWeapon->SecondaryClipIcon, BonClipPosX + ClipOffset, BonClipPosY, ScaleUI);
+			}
+
+			//Drawing secondary weapon icon, ammo in the clip and total ammo numbers
+			Canvas->SetDrawColor(FColor::White);
+			Canvas->DrawIcon(BonusWeapon->SecondaryIcon, BonWeapPosX, BonWeapPosY, ScaleUI);
+
+			const float TextOffset = 10;
+			float SizeX, SizeY;
+			float TopTextHeight;
+			FString Text = FString::FromInt(BonusWeapon->GetCurrentAmmo());
+
+			Canvas->StrLen(BigFont, Text, SizeX, SizeY);
+			const float TopTextScale = 0.53f; // of 51pt font
+			TopTextHeight = SizeY * TopTextScale;
+
+			const float TopTextPosX = Canvas->ClipX - Canvas->OrgX - (BonWeaponBoxWidth + Offset * 2 + (BonClipBoxWidth + SizeX * TopTextScale) / 2.0f)  * ScaleUI;
+			const float TopTextPosY = BonWeapBgPosY + (SecondaryWeapBg.VL - TopTextHeight) / 2.0f * ScaleUI;
+
+			TextItem.Text = FText::FromString(Text);
+			TextItem.Scale = FVector2D(TopTextScale * ScaleUI, TopTextScale * ScaleUI);
+			Canvas->DrawItem(TextItem, TopTextPosX, TopTextPosY);
+		}
+		// END OF BONUS WEAPON
+		/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
 	}
 }
 
@@ -348,16 +439,17 @@ void AShooterHUD::DrawJetpackFuel()
 	if (!CharMov)
 		return;
 	
-	const float JetpackOffsetX = 20.0f;
-	const float JetpackOffsetY = 150.0f;
+	const float JetpackOffsetY = 75.0f;
+	const float JetpackScaleMul = 0.75f;
+
 	Canvas->SetDrawColor(FColor::White);
-	const float JetpackFuelPosX = Canvas->ClipX - (JetpackFuelBarBg.UL + JetpackOffsetX) * ScaleUI;
-	const float JetpackFuelPosY = Canvas->ClipY - (Offset + JetpackFuelBarBg.VL + JetpackOffsetY) * ScaleUI;
-	Canvas->DrawIcon(JetpackFuelBarBg, JetpackFuelPosX, JetpackFuelPosY, ScaleUI);
+	const float JetpackFuelPosX = (Canvas->ClipX - JetpackFuelBarBg.UL * ScaleUI * JetpackScaleMul) / 2;
+	const float JetpackFuelPosY = Canvas->ClipY - (Offset + JetpackFuelBarBg.VL + JetpackOffsetY) * ScaleUI * JetpackScaleMul;
+	Canvas->DrawIcon(JetpackFuelBarBg, JetpackFuelPosX, JetpackFuelPosY, ScaleUI * JetpackScaleMul);
 	const float FuelAmount = FMath::Min(1.0f, CharMov->GetJetpackAvailableFuel()/CharMov->GetJetpackMaxFuel());
 
 	FCanvasTileItem TileItem(FVector2D(JetpackFuelPosX, JetpackFuelPosY), JetpackFuelBar.Texture->Resource,
-							 FVector2D(JetpackFuelBar.UL * FuelAmount  * ScaleUI, JetpackFuelBar.VL * ScaleUI), FLinearColor::White);
+							 FVector2D(JetpackFuelBar.UL * FuelAmount  * ScaleUI * JetpackScaleMul, JetpackFuelBar.VL * ScaleUI * JetpackScaleMul), FLinearColor::White);
 	MakeUV(JetpackFuelBar, TileItem.UV0, TileItem.UV1, JetpackFuelBar.U, JetpackFuelBar.V, JetpackFuelBar.UL * FuelAmount, JetpackFuelBar.VL);
 	TileItem.BlendMode = SE_BLEND_Translucent;
 	Canvas->DrawItem(TileItem);
@@ -569,6 +661,18 @@ void AShooterHUD::DrawHUD()
 		Canvas->DrawItem( TileItem );
 		Canvas->ApplySafeZoneTransform();
 	}
+
+	/**BEGIN: CODE ADDED BY VINCENZO PARRILLA*/
+	//draw frozen overlay
+	if (MyPawn && MyPawn->IsAlive() && MyPawn->IsFrozen())
+	{
+		Canvas->PopSafeZoneTransform();
+		FCanvasTileItem TileItem(FVector2D(0, 0), FrozenOverlayTexture->Resource, FVector2D(Canvas->ClipX, Canvas->ClipY), FLinearColor(1.0f, 1.0f, 1.0f, 1.0));
+		TileItem.BlendMode = SE_BLEND_Translucent;
+		Canvas->DrawItem(TileItem);
+		Canvas->ApplySafeZoneTransform();
+	}
+	/**END: CODE ADDED BY VINCENZO PARRILLA*/
 
 	// net mode
 	if (GetNetMode() != NM_Standalone)

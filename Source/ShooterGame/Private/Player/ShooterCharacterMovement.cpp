@@ -4,6 +4,7 @@
 #include "Player/ShooterCharacterMovement.h"
 #include "Kismet/GameplayStatics.h"
 #include "ShooterPlayerState.h"
+#include "Net/UnrealNetwork.h"
 
 //----------------------------------------------------------------------//
 // UPawnMovementComponent
@@ -15,6 +16,7 @@ UShooterCharacterMovement::UShooterCharacterMovement(const FObjectInitializer& O
 	bWantsToTeleport = false;
 	bWantsToJetpack = false;
 	JetpackAvailableFuel = JetpackMaxFuel;
+	FrozenTime = 3.0f;
 	/**END: CODE ADDED BY VINCENZO PARRILLA*/
 }
 
@@ -120,6 +122,41 @@ void UShooterCharacterMovement::FillJetpack(const float DeltaSeconds)
 	if (IsMovingOnGround())
 		if (JetpackAvailableFuel <= JetpackMaxFuel) 
 			JetpackAvailableFuel = FMath::Clamp(JetpackAvailableFuel + JetpackFuelFillRate * DeltaSeconds, 0.0f, JetpackMaxFuel);
+}
+
+void UShooterCharacterMovement::SetFrozenState(bool IsFrozen)
+{
+	AShooterCharacter* Char = Cast<AShooterCharacter>(CharacterOwner);
+	Char->bIsFrozen = IsFrozen;
+	// only the server will set the timer and will notify the client when its pawn is not frozen
+	if (IsFrozen && CharacterOwner->GetLocalRole() == ROLE_Authority)
+	{
+		StopMovementImmediately();
+		GetWorld()->GetTimerManager().ClearTimer(*FrozenTimer);
+		FrozenTimer->Invalidate();
+		GetWorld()->GetTimerManager().SetTimer(*FrozenTimer, this, &UShooterCharacterMovement::TimeElapsedCallback, FrozenTime, false);
+	}
+	if (PawnOwner->IsLocallyControlled())
+	{
+		PawnOwner->GetController()->SetIgnoreMoveInput(IsFrozen);
+		PawnOwner->GetController()->SetIgnoreLookInput(IsFrozen);
+	}
+	Char->SetFrozenAppearance(IsFrozen);
+}
+
+void UShooterCharacterMovement::TimeElapsedCallback()
+{
+	SetFrozenState(false);
+}
+
+bool UShooterCharacterMovement::ServerSetFrozenState_Validate(bool IsFrozen)
+{
+	return true;
+}
+
+void UShooterCharacterMovement::ServerSetFrozenState_Implementation(bool IsFrozen)
+{
+	SetFrozenState(IsFrozen);
 }
 
 void UShooterCharacterMovement::MulticastPlaySound_Implementation(USoundBase* Sound, FVector Location)
